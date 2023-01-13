@@ -1,11 +1,4 @@
-﻿using System;
-using EpcQrCodeGenerator.Models;
-using System.Globalization;
-using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
-
-namespace EpcQrCodeGenerator;
+﻿namespace EpcQrCodeGenerator;
 
 /// <summary>
 /// Stores the required data to generate an EPC QR-Code.

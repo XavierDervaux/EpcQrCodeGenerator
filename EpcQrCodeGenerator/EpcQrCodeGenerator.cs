@@ -1,8 +1,4 @@
-﻿using System.IO;
-using Net.Codecrete.QrCodeGenerator;
-using System.Text;
-
-namespace EpcQrCodeGenerator;
+﻿namespace EpcQrCodeGenerator;
 
 /// <summary>
 /// A basic QR-Code generator for EPC Data Payloads
