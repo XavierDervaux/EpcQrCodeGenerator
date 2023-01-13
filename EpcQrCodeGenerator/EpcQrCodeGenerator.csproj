@@ -3,7 +3,32 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <PackageId>XD.EpcQrCodeGenerator</PackageId>
+    <Title>EPC QR-Code Generator</Title>
+    <Authors>Xavier Dervaux</Authors>
+    <Description>A simple EPC QR-Code generator to initiate SEPA payments.</Description>
+    <PackageProjectUrl>https://github.com/XavierDervaux/EpcQrCodeGenerator</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/XavierDervaux/EpcQrCodeGenerator</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>EPC;QR-Code;SEPA;Payment</PackageTags>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
+    <Version>1.0.1</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="2.0.3" />

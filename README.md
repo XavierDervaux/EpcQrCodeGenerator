@@ -7,9 +7,12 @@ being highly convenient to use.
 
 ## How to use the library
 
-The repository contains a console app that can be used to experiment with the 
-library or to quickly generate an EPC QR-Code on the fly. You can use it in your
-own application with these few lines of code :
+If you just want to try the library or just generate one single EPC QR-Code, the 
+repository contains a console app that can be used to experiment with the generator.
+
+To use the library in your own application, first install the latest version of the 
+package [from nuget.org here.](https://www.nuget.org/packages/XD.EpcQrCodeGenerator/)
+Then the library can be used with these few lines of code :
 ```
 var epcData = new EpcQrCodeData
 {
@@ -28,7 +31,7 @@ var epcGenerator = new EpcQrCodeGenerator.EpcQrCodeGenerator(epcData);
 epcGenerator.SaveAsSvg(filePath);
 ```
 Using the `SaveAsSvg()` method will trigger a validation of the values encoded 
-in the data object. If the values are invalid, and detailed exception will be triggerred.
+in the data object. If the values are invalid, a detailed exception will be triggered.
 
 The `SaveAsSvg()` method uses an external QR-Code generator to render the actual image.
 If you want to use your own generator you can get the payload used to generate 
