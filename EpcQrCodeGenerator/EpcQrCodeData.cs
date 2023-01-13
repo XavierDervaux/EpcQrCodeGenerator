@@ -1,4 +1,9 @@
-﻿using EpcQrCodeGenerator.Models;
+﻿using System;
+using EpcQrCodeGenerator.Models;
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace EpcQrCodeGenerator;
 
@@ -92,4 +97,147 @@ public class EpcQrCodeData
     /// Optional.
     /// </summary>
     public string BeneficiaryToOriginatorInformation { get; set; } = null;
+
+
+    /// <summary>
+    /// Converts the current EPC QR-Code Data object into a valid string payload that can be used with any generator to create a valid EPC QR-Code.
+    /// </summary>
+    /// <returns>A valid EPC QR-Code payload.</returns>
+    /// <exception cref="InvalidDataException">If the provided EPC QR-Code data was invalid and could not be parsed.</exception>
+    public string GeneratePayload()
+    {
+        try
+        {
+            TryValidateData();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidDataException("The provided EPC QR-Code data was invalid and could not be parsed.", ex);
+        }
+
+        var res = string.Empty;
+        const string lf = "\n";
+
+        res += ServiceTag + lf;
+        res += Version + lf;
+        res += (int)CharacterSet + lf;
+        res += IdentificationCode + lf;
+        res += BeneficiaryBic + lf;
+        res += BeneficiaryName + lf;
+        res += BeneficiaryIban + lf;
+        res += "EUR" + CreditAmount.ToString("0.00", CultureInfo.InvariantCulture) + lf;
+        res += PurposeOfCreditTransfer + lf;
+        res += RemittanceInformationStructured + lf;
+        res += RemittanceInformationUnstructured + lf;
+        res += BeneficiaryToOriginatorInformation + lf;
+
+        return EncodeString(res, CharacterSet);
+    }
+
+
+    /// <summary>
+    /// Validates the EPC QR-Code data.
+    /// </summary>
+    /// <exception cref="InvalidDataException">Throws a detailed exception if validation was unsuccessful.</exception>
+    /// <returns>True if validation was successful.</returns>
+    private void TryValidateData()
+    {
+        if (ServiceTag != "BCD") throw new InvalidDataException("ServiceTag cannot have a value different than \"BCD\".");
+
+        if (Version is null) throw new InvalidDataException("Version needs to be defined.");
+
+        if (CharacterSet is default(EpcEncoding)) throw new InvalidDataException("CharacterSet is mandatory.");
+
+        if (IdentificationCode != "SCT") throw new InvalidDataException("IdentificationCode cannot have a value different than \"SCT\".");
+
+        var beneficiaryBicIsNullOrEmpty = string.IsNullOrWhiteSpace(BeneficiaryBic);
+        if (beneficiaryBicIsNullOrEmpty && Version == EpcVersion.V1) throw new InvalidDataException("BeneficiaryBic is mandatory when using Version 1.");
+        if (!beneficiaryBicIsNullOrEmpty && BeneficiaryBic.Length < 8) throw new InvalidDataException("BeneficiaryBic cannot be shorter than 8 characters when defined.");
+        if (!beneficiaryBicIsNullOrEmpty && BeneficiaryBic.Length > 11) throw new InvalidDataException("BeneficiaryBic cannot be longer than 11 characters.");
+        if (!beneficiaryBicIsNullOrEmpty && !IsValidBic(BeneficiaryBic)) throw new InvalidDataException("BeneficiaryBic does not have a valid BIC format.");
+
+        if (string.IsNullOrWhiteSpace(BeneficiaryName)) throw new InvalidDataException("BeneficiaryName is mandatory.");
+        if (BeneficiaryName.Length > 70) throw new InvalidDataException("BeneficiaryName cannot be longer than 70 characters.");
+
+        if (string.IsNullOrWhiteSpace(BeneficiaryIban)) throw new InvalidDataException("BeneficiaryIban is mandatory.");
+        if (BeneficiaryIban.Length > 34) throw new InvalidDataException("BeneficiaryIban cannot be longer than 34 characters.");
+        if (!IsValidIban(BeneficiaryIban)) throw new InvalidDataException("BeneficiaryIban does not have a valid IBAN format.");
+
+        if (CreditAmount is default(decimal)) throw new InvalidDataException("CreditAmount is mandatory.");
+        if (CreditAmount < 0.01m) throw new InvalidDataException("CreditAmount cannot be inferior to 0,01.");
+        if (CreditAmount > 999999999.99m) throw new InvalidDataException("CreditAmount cannot be superior to 999999999,99.");
+
+        if (PurposeOfCreditTransfer?.Length > 4) throw new InvalidDataException("PurposeOfCreditTransfer cannot be longer than 4 characters.");
+
+        if (!string.IsNullOrWhiteSpace(RemittanceInformationStructured) && !string.IsNullOrWhiteSpace(RemittanceInformationUnstructured)) throw new InvalidDataException("Only one type of remittance information can be used per data set.");
+        if (RemittanceInformationStructured?.Length > 35) throw new InvalidDataException("RemittanceInformationStructured cannot be longer than 35 characters.");
+        if (RemittanceInformationUnstructured?.Length > 140) throw new InvalidDataException("RemittanceInformationUnstructured cannot be longer than 140 characters.");
+
+        if (BeneficiaryToOriginatorInformation?.Length > 70) throw new InvalidDataException("BeneficiaryToOriginatorInformation cannot be longer than 70 characters.");
+    }
+
+    /// <summary>
+    /// Validates the structure of a BIC code.
+    /// Does not check if the BIN code actually exists.
+    /// </summary>
+    /// <param name="bic">BIC string to validate.</param>
+    /// <returns>true if valid, false if invalid.</returns>
+    private bool IsValidBic(string bic)
+    {
+        var res = false;
+
+        if (bic is not null)
+        {
+            res = Regex.IsMatch(bic, @"^([a-zA-Z]{4}[a-zA-Z]{2}[a-zA-Z0-9]{2}([a-zA-Z0-9]{3})?)$");
+        }
+
+        return res;
+    }
+
+
+    /// <summary>
+    /// Validates the structure of an IBAN code.
+    /// Does not check if the IBAN code actually exists.
+    /// </summary>
+    /// <param name="iban">IBAN string to validate.</param>
+    /// <returns>true if valid, false if invalid.</returns>
+    private bool IsValidIban(string iban)
+    {
+        var res = false;
+
+        if (iban is not null)
+        {
+            res = Regex.IsMatch(iban, @"^[a-zA-Z]{2}[0-9]{2}([a-zA-Z0-9]?){16,30}$");
+        }
+
+        return res;
+    }
+
+    /// <summary>
+    /// Encodes a string in the provided character set.
+    /// Only character sets compatible with EPC specifications are allowed.
+    /// </summary>
+    /// <param name="toEncode">String to encode.</param>
+    /// <param name="characterSet">EPC allowed character set.</param>
+    /// <returns>String encoded with the provided character set.</returns>
+    /// <exception cref="NotImplementedException">Throws when providing an unsupported character set.</exception>
+    private string EncodeString(string toEncode, EpcEncoding characterSet)
+    {
+        var requestedCharSet = characterSet switch
+        {
+            EpcEncoding.Utf8 => "UTF-8",
+            EpcEncoding.Iso88591 => "ISO-8859-1",
+            EpcEncoding.Iso88592 => "ISO-8859-2",
+            EpcEncoding.Iso88594 => "ISO-8859-4",
+            EpcEncoding.Iso88595 => "ISO-8859-5",
+            EpcEncoding.Iso88597 => "ISO-8859-7",
+            EpcEncoding.Iso885910 => "ISO-8859-10",
+            EpcEncoding.Iso885915 => "ISO-8859-15",
+            _ => throw new NotImplementedException("The requested encoding is not implemented."),
+        };
+        var charset = Encoding.GetEncoding(requestedCharSet);
+        var encodedBytes = charset.GetBytes(toEncode);
+
+        return charset.GetString(encodedBytes);
+    }
 }
